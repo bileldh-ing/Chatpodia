@@ -1,0 +1,21 @@
+default_platform(:android)
+
+platform :android do
+  desc "Build a signed AAB and upload it to the Play internal track"
+  lane :internal do
+    sh("cd ../.. && flutter build appbundle --release --obfuscate --split-debug-info=build/symbols")
+    upload_to_play_store(
+      track: "internal",
+      aab: "../build/app/outputs/bundle/release/app-release.aab",
+      skip_upload_metadata: false,
+      skip_upload_images: true,
+      skip_upload_screenshots: true
+    )
+  end
+
+  desc "Promote internal → production (staged 10%)"
+  lane :promote do
+    upload_to_play_store(track: "internal", track_promote_to: "production", rollout: "0.1",
+                         skip_upload_aab: true, skip_upload_metadata: true)
+  end
+end

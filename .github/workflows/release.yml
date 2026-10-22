@@ -1,0 +1,118 @@
+name: Release
+
+# Push a tag like v1.2.0 to build signed store binaries, publish a GitHub
+# Release, and (when store secrets exist) upload to Play internal testing
+# and TestFlight.
+on:
+  push:
+    tags: ["v*.*.*"]
+  workflow_dispatch:
+    inputs:
+      track:
+        description: "Google Play track"
+        default: internal
+        type: choice
+        options: [internal, alpha, beta, production]
+
+permissions:
+  contents: write
+
+env:
+  FLUTTER_VERSION: "3.47.x"
+
+jobs:
+  android:
+    name: Android · signed AAB
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: "17", cache: gradle }
+      - uses: subosito/flutter-action@v2
+        with: { channel: stable, flutter-version: "${{ env.FLUTTER_VERSION }}", cache: true }
+      - run: flutter pub get
+      - name: Decode upload keystore
+        env:
+          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          if [ -z "$KEYSTORE_B64" ]; then echo "::error::ANDROID_KEYSTORE_BASE64 secret missing"; exit 1; fi
+          echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/upload.jks"
+          echo "ANDROID_KEYSTORE_PATH=$RUNNER_TEMP/upload.jks" >> "$GITHUB_ENV"
+      - name: Build signed bundle + APKs
+        env:
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          flutter build appbundle --release --obfuscate --split-debug-info=build/symbols --build-number=${{ github.run_number }}
+          flutter build apk --release --split-per-abi --obfuscate --split-debug-info=build/symbols --build-number=${{ github.run_number }}
+      - name: Zip debug symbols
+        run: cd build && zip -qr ../android-symbols.zip symbols
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android-release
+          path: |
+            build/app/outputs/bundle/release/app-release.aab
+            build/app/outputs/flutter-apk/*.apk
+            android-symbols.zip
+      - name: Upload to Google Play
+        if: ${{ env.PLAY_JSON != '' }}
+        env:
+          PLAY_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+        uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          packageName: com.chatpodia.chatpodia
+          releaseFiles: build/app/outputs/bundle/release/app-release.aab
+          track: ${{ github.event.inputs.track || 'internal' }}
+          status: completed
+          whatsNewDirectory: android/fastlane/metadata/android/whatsnew
+
+  ios:
+    name: iOS · TestFlight
+    runs-on: macos-latest
+    timeout-minutes: 60
+    environment: production
+    env:
+      ASC_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with: { channel: stable, flutter-version: "${{ env.FLUTTER_VERSION }}", cache: true }
+      - run: flutter pub get
+      - name: Unsigned build (always)
+        if: ${{ env.ASC_KEY_ID == '' }}
+        run: flutter build ios --release --no-codesign --build-number=${{ github.run_number }}
+      - uses: ruby/setup-ruby@v1
+        if: ${{ env.ASC_KEY_ID != '' }}
+        with: { ruby-version: "3.3", bundler-cache: false }
+      - name: Signed build + TestFlight (fastlane match)
+        if: ${{ env.ASC_KEY_ID != '' }}
+        working-directory: ios
+        env:
+          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+          APP_STORE_CONNECT_KEY_P8: ${{ secrets.APP_STORE_CONNECT_KEY_P8 }}
+          MATCH_GIT_URL: ${{ secrets.MATCH_GIT_URL }}
+          MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
+          MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
+          BUILD_NUMBER: ${{ github.run_number }}
+        run: |
+          gem install fastlane --no-document
+          fastlane beta
+
+  github-release:
+    name: GitHub Release
+    needs: android
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with: { name: android-release, path: dist }
+      - uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: |
+            dist/**/*.apk
+            dist/**/*.aab

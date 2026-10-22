@@ -1,0 +1,10 @@
+Chatpodia is a beautifully crafted AI assistant with a liquid-glass interface.
+
+• Chat with Podia — streaming answers, code blocks with one-tap copy, quick replies
+• Voice mode — talk naturally, see your words appear live, hear answers read aloud
+• Create images — describe anything and get a high-quality image in seconds
+• Build web pages & mini apps — preview them live inside the app
+• Motion clips — Podia writes a storyboard and animates it into a short clip
+• Attach photos and ask questions about them (Gemini / OpenAI)
+• Private by design — your account and chats are stored on your device, protected by an optional fingerprint / face lock
+• Works free out of the box, or bring your own Gemini / OpenAI-compatible key
