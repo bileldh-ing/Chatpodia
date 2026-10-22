@@ -41,7 +41,7 @@ jobs:
           lcov --summary coverage/lcov.info | tee coverage-summary.txt
           echo '### Coverage' >> "$GITHUB_STEP_SUMMARY"
           echo '```' >> "$GITHUB_STEP_SUMMARY"; cat coverage-summary.txt >> "$GITHUB_STEP_SUMMARY"; echo '```' >> "$GITHUB_STEP_SUMMARY"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: coverage
           path: coverage/lcov.info
@@ -72,7 +72,7 @@ jobs:
           flutter build appbundle --release \
             --obfuscate --split-debug-info=build/symbols \
             --build-number=${{ github.run_number }}
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: android-${{ github.run_number }}
           path: |
@@ -96,7 +96,7 @@ jobs:
       - run: flutter build ios --release --no-codesign --build-number=${{ github.run_number }}
       - name: Package unsigned .app
         run: cd build/ios/iphoneos && zip -qr ../../../Runner-unsigned.zip Runner.app
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: ios-unsigned-${{ github.run_number }}
           path: Runner-unsigned.zip
