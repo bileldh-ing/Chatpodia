@@ -1,0 +1,91 @@
+name: chatpodia
+description: Chatpodia — a premium AI assistant with liquid-glass UI, local auth, streaming AI, voice, image and web/app generation.
+publish_to: 'none'
+version: 1.1.0+2
+
+environment:
+  sdk: ">=3.5.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # UI
+  flutter_markdown_plus: ^1.0.3
+
+  # State
+  provider: ^6.1.2
+
+  # Local database (Room-style entities + DAOs on SQLite)
+  sqflite: ^2.4.1
+  path: ^1.9.0
+
+  # Auth / security
+  crypto: ^3.0.6
+  flutter_secure_storage: ^9.2.2
+  google_sign_in: ^6.2.2
+
+  # Networking / AI
+  http: ^1.2.2
+
+  # Voice
+  speech_to_text: ^7.0.0
+  flutter_tts: ^4.2.0
+
+  # Generation previews & sharing
+  webview_flutter: ^4.10.0
+  share_plus: ^11.0.0
+  url_launcher: ^6.3.1
+  path_provider: ^2.1.5
+  image_picker: ^1.1.2
+  local_auth: ^2.3.0
+  package_info_plus: ^8.1.0
+  markdown: ^7.2.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+  sqflite_common_ffi: ^2.3.4
+  flutter_launcher_icons: ^0.14.1
+  flutter_native_splash: ^2.4.1
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: assets/branding/icon.png
+  adaptive_icon_background: "#0B1C22"
+  adaptive_icon_foreground: assets/branding/icon_foreground.png
+  remove_alpha_ios: true
+
+flutter_native_splash:
+  color: "#0B1C22"
+  image: assets/branding/splash.png
+  android_12:
+    color: "#0B1C22"
+    image: assets/branding/splash_android12.png
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/images/
+  fonts:
+    - family: PlusJakartaSans
+      fonts:
+        - asset: assets/google_fonts/PlusJakartaSans-Regular.ttf
+          weight: 400
+        - asset: assets/google_fonts/PlusJakartaSans-Medium.ttf
+          weight: 500
+        - asset: assets/google_fonts/PlusJakartaSans-SemiBold.ttf
+          weight: 600
+        - asset: assets/google_fonts/PlusJakartaSans-Bold.ttf
+          weight: 700
+        - asset: assets/google_fonts/PlusJakartaSans-ExtraBold.ttf
+          weight: 800
+
+# Tests run SQLite through FFI against the OS-provided library
+# (CI installs libsqlite3-dev). The app itself uses sqflite's platform DB.
+hooks:
+  user_defines:
+    sqlite3:
+      source: system
