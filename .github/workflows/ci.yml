@@ -32,7 +32,13 @@ jobs:
       - name: Format check
         run: dart format --output=none --set-exit-if-changed lib test
       - name: Static analysis
-        run: flutter analyze --fatal-infos
+        run: |
+          # Surface every issue as a PR annotation.
+          flutter analyze --fatal-infos > analyze.txt 2>&1 || {
+            cat analyze.txt
+            grep -E " • " analyze.txt | sed -E 's/^\s*(error|warning|info) • (.*) • ([^:]+):([0-9]+):([0-9]+) • (.*)$/::error file=\3,line=\4,col=\5::\2 (\6)/'
+            exit 1
+          }
       - name: Unit & widget tests (with coverage)
         run: flutter test --coverage --reporter expanded
       - name: Coverage summary
